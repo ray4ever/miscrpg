@@ -1,4 +1,7 @@
+from copy import deepcopy
+
 class Damage:
+    name = 'unknown'
     def __init__(self, value, permanent=False):
         self.value = value  # immediate damage
         self.is_permanent = permanent
@@ -11,6 +14,34 @@ class TurnBasedDamage(Damage):
         self.turns = turns  # number of turns
 
 
+class PiercingDamage(Damage):
+    name = 'piercing'
+
+
+class SlashingDamage(Damage):
+    name = 'slashing'
+
+
+class CrushingDamage(Damage):
+    name = 'crushing'
+
+
+class BleedingDamage(TurnBasedDamage):
+    name = 'bleeding'
+    def __init__(self, turn_value=0, turns=0, permanent=False):
+        super().__init__(0, turn_value, turns, permanent)
+
+
+class MixedDamage:
+    def __init__(self, lst):
+        assert all(isinstance(x, Damage) for x in lst), 'can only include a "damage"' 
+        self.lst = lst
+
+    def add(self, damage):
+        assert isinstance(damage, Damage), 'can only add a "damage"'
+        self.lst.append(damage)
+
+
 class Damageable:
     def __init__(self, condition_value=1):
         self.cur_value = condition_value
@@ -19,7 +50,7 @@ class Damageable:
 
     def take_damage(self, damage):
         if isinstance(damage, TurnBasedDamage):
-            self.damages.append(damage)  # we need to track it
+            self.damages.append(deepcopy(damage))  # we need to track it
         if damage.is_permanent:
             self.max_value -= damage.value  # hurt max value
         else:
