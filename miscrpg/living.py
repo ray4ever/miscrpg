@@ -2,7 +2,9 @@ from muscular_system import MuscularCondition
 from immune_system import ImmuneCondition
 from sensory_system import SensoryCondition
 from cardio_system import CardioCondition
-from damageable import Damage, TurnBasedDamage, MixedDamage, SlashingDamage, BleedingDamage
+from damageable import Damage, TurnBasedDamage, MixedDamage, SlashingDamage, BleedingDamage, CrushingDamage
+from weapon import Fist, Sword, NatureWeapon, ColdWeapon, Weapon
+from copy import deepcopy
 
 class Living:
     CRIPPLED_THRESHOLD = 0.6
@@ -16,6 +18,25 @@ class Living:
         self.perks = perks
         self.turn_based = [self.m, self.i, self.s, self.c]
         self.damageable = [self.m, self.i, self.s, self.c]
+        self.weapon = Fist()
+
+    def attack(self):
+        adjusted = []
+        if isinstance(self.weapon.damage, MixedDamage):
+            damages = self.weapon.damage.lst
+        else:
+            damages = [self.weapon.damage]
+        for damage in damages:
+            dmg = deepcopy(damage)
+            if isinstance(self.weapon, NatureWeapon):
+                dmg.value = int(dmg.value * (self.m.cur_value / 100))
+            elif isinstance(self.weapon, ColdWeapon):
+                dmg.value = int(dmg.value * (self.m.cur_value / 100))
+            adjusted.append(dmg)
+        if len(adjusted) > 1:
+            return MixedDamage(adjusted)
+        else:
+            return adjusted[0]
 
     def health(self):
         return self.m.cur_value * self.s.cur_value // 100
@@ -43,28 +64,32 @@ class Living:
             x.take_turn()
             x.change_cur_value(self.regeneration())
 
-    def take_damage(self, damages):
-        if isinstance(damages, MixedDamage):
-            damages = damages.lst
+    def take_damage(self, damage):
+        if isinstance(damage, MixedDamage):
+            damages = damage.lst
         else:
-            damages = [damages]  # make it list
-        for damage in damages:
-            if isinstance(damage, SlashingDamage):
-                self.m.take_damage(damage)
-            elif isinstance(damage, BleedingDamage):
-                self.c.take_damage(damage)
+            damages = [damage]  # make it list
+        for dmg in damages:
+            if isinstance(dmg, SlashingDamage):
+                self.m.take_damage(dmg)
+            elif isinstance(dmg, BleedingDamage):
+                self.c.take_damage(dmg)
+            elif isinstance(dmg, CrushingDamage):
+                self.s.take_damage(dmg)
+
+
+class Intelligent(Living):
+    def equip(self, weapon):
+        assert isinstance(weapon, Weapon), 'must input instance of Weapon'
+        self.weapon = weapon
 
 
 if __name__ == "__main__":
-    player = Living('Player', 100, 100, 100, 100)
+    player = Intelligent('Player', 100, 100, 100, 100)
+    player.equip(Sword())
     monster = Living('Monster', 500, 100, 50, 100)  # stronger muscle, but weaker sensory system
-    slashed_and_bleeding = TurnBasedDamage(30, 2, 10)
-    sword_damage = MixedDamage([
-        SlashingDamage(30),
-        BleedingDamage(2, 10)
-    ])
-    player.take_damage(sword_damage)
-    monster.take_damage(sword_damage)
+    monster.take_damage(player.attack())
+    player.take_damage(monster.attack())
     for turn in range(0, 11):
         print('Turn %d' % turn)
         for being in [player, monster]:
