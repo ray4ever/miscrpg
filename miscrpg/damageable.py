@@ -1,4 +1,5 @@
 from copy import deepcopy
+from rpg_logs import battle_log
 
 class Damage:
     name = 'unknown'
@@ -33,6 +34,7 @@ class BleedingDamage(TurnBasedDamage):
 
 
 class MixedDamage:
+    lst = []  # list of all damages
     def __init__(self, lst):
         assert all(isinstance(x, Damage) for x in lst), 'can only include a "damage"' 
         self.lst = lst
@@ -43,6 +45,9 @@ class MixedDamage:
 
 
 class Damageable:
+    name = 'unknown'
+    owner = 'unknown'
+
     def __init__(self, condition_value=1):
         self.cur_value = condition_value
         self.max_value = condition_value
@@ -75,6 +80,7 @@ class Damageable:
                 self.change_max_value(-damage.turn_value)
             else:
                 self.change_cur_value(-damage.turn_value)
+                battle_log.add('%s suffered [%s] damage on [%s] -%d' % (self.owner, damage.name, self.name, damage.turn_value))
             damage.turns -= 1
             if damage.turns > 0:
                 damages.append(damage)

@@ -7,15 +7,11 @@ class Weapon:
         self.damage = damage
     
 
-class ColdWeapon(Weapon):
-    pass
-
-
-class Sword(ColdWeapon):
+class Sword(Weapon):
     def __init__(self):
         super().__init__(MixedDamage([
             SlashingDamage(30),
-            BleedingDamage(2, 10)
+            BleedingDamage(2, 10)  # bleeding for 10 turns if not treated
         ]))
 
 
@@ -23,6 +19,6 @@ class NatureWeapon(Weapon):
     pass
 
 
-class Fist(NatureWeapon):
+class Limbs(NatureWeapon):
     def __init__(self):
         super().__init__(CrushingDamage(5))
