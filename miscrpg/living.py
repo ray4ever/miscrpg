@@ -3,7 +3,7 @@ from immune_system import ImmuneCondition
 from sensory_system import SensoryCondition
 from cardio_system import CardioCondition
 from damageable import Damage, TurnBasedDamage, MixedDamage, SlashingDamage, BleedingDamage, CrushingDamage
-from weapon import Limbs, Sword, NatureWeapon, Weapon
+from weapon import Limbs, Sword, NatureWeapon, Weapon, Club
 from armor import LeatherArmor, Skin
 from rpg_logs import battle_log
 from copy import deepcopy
@@ -59,7 +59,7 @@ class Living:
         return self.c.cur_value // 70  # fail to regenrate if cardio condition lower than 70%
 
     def is_dead(self):
-        return self.s.cur_value == 0 and len(self.s.damages) == 0  # permanent nerve zero
+        return (self.s.cur_value <= -self.s.max_value) or (self.s.max_value <= 0)
 
     def is_disabled(self):
         return self.m.cur_value == 0
@@ -69,6 +69,23 @@ class Living:
 
     def is_paralyzed(self):
         return self.s.cur_value == 0
+
+    def is_unconscious(self):
+        return self.s.cur_value <= 0
+
+    def status(self):
+        text = ''
+        if self.is_dead():
+            return 'DEAD'
+        if self.is_crippled():
+            text += 'C'
+        if self.is_disabled():
+            text += 'D'
+        if self.is_paralyzed():
+            text += 'P'
+        if self.is_unconscious():
+            text += 'U'
+        return text
 
     def take_turn(self):
         for x in self.turn_based:
@@ -101,7 +118,8 @@ class Intelligent(Living):
 if __name__ == "__main__":
     player = Intelligent('Player', 100, 100, 100, 100)
     player.equip(Sword())
-    monster = Living('Monster', 500, 100, 50, 100)  # stronger muscle, but weaker sensory system
+    monster = Intelligent('Monster', 500, 100, 50, 100)  # stronger muscle, but weaker sensory system
+    monster.equip(Club())
     monster.defend(player.attack())
     player.defend(monster.attack())
     for turn in range(0, 6):
@@ -109,5 +127,5 @@ if __name__ == "__main__":
         battle_log.flush()
         for being in [player, monster]:
             stats = [x.cur_value for x in being.damageable]
-            print('%s %s (crippled=%s)' % (being.name, stats, being.is_crippled()))
+            print('%s %s (%s)' % (being.name, stats, being.status()))
             being.take_turn()

@@ -15,6 +15,13 @@ class Sword(Weapon):
         ]))
 
 
+class Club(Weapon):
+    def __init__(self):
+        super().__init__(MixedDamage([
+            CrushingDamage(30)
+        ]))
+
+
 class NatureWeapon(Weapon):
     pass
 

@@ -68,9 +68,7 @@ class Damageable:
 
     def change_cur_value(self, delta):
         self.cur_value += delta
-        if self.cur_value < 0:  # bounded by 0 and max
-            self.cur_value = 0
-        elif self.cur_value > self.max_value:
+        if self.cur_value > self.max_value:
             self.cur_value = self.max_value
 
     def take_turn(self):
