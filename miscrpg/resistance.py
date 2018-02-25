@@ -2,6 +2,7 @@ from copy import deepcopy
 
 class Resistance:
     name = 'unknown'
+    value = 0
     def __init__(self, value):
         self.value = value  # immediate Resistance
 

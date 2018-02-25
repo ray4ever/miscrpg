@@ -4,14 +4,16 @@ from rpg_logs import battle_log
 
 
 damage_resistance_map = {
-    SlashingDamage.name: SlashResistance,
-    CrushingDamage.name: CrushResistance,
-    PiercingDamage.name: PierceResistance,
-    Damage.name: CrushResistance  # unknown damage defaults crushing, mostly not used
+    SlashingDamage.name: SlashResistance.name,
+    CrushingDamage.name: CrushResistance.name,
+    PiercingDamage.name: PierceResistance.name,
+    Damage.name: CrushResistance.name  # unknown damage defaults crushing, mostly not used
 }
 
 
 class Armor(Damageable):
+    name = 'unknown'
+
     def __init__(self, condition, resistance):
         assert isinstance(resistance, Resistance) or isinstance(resistance, MixedResistance), 'must input instance of Resistance'
         super().__init__(condition)
@@ -27,18 +29,22 @@ class Armor(Damageable):
             else:
                 damages = [damage]
             for dmg in damages:
-                assert dmg.name and dmg.name != 'unknown', '%s: damage name must be known' % self.__class__.__name__
-                resist = damage_resistance_map.get(dmg.name)
-                assert resist is not None, '%s: damage resistance relation must exists' % self.__class__.__name__
-                dmg_value = dmg.value - resist.value
-                battle_log.add('damage resisted by [%s]: %d -> %d' % (self.__class__.__name__, dmg.value, dmg_value))
-                dmg.value = dmg_value
+                assert dmg.name and dmg.name != 'unknown', '%s: damage name must be known' % self.name
+                for r in self.resistances:
+                    if damage_resistance_map.get(dmg.name) == r.name:
+                        dmg_value = dmg.value - r.value
+                        if dmg_value < 0:
+                            dmg_value = 0
+                        battle_log.add('damage resisted by [%s]: %d -> %d' % (self.name, dmg.value, dmg_value))
+                        dmg.value = dmg_value
             self.cur_value -= 1  # armor will be damaged after each "resist"
-            battle_log.add('armor [%s] condition decreased to: %d' % self.cur_value)
+            battle_log.add('armor [%s] condition decreased to: %d' % (self.name, self.cur_value))
         return damage
     
 
 class LeatherArmor(Armor):
+    name = 'leather'
+
     def __init__(self, condition=50):
         super().__init__(condition, MixedResistance([
             SlashResistance(5),

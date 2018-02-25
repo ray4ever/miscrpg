@@ -45,6 +45,10 @@ class MixedDamage:
 
 
 class Damageable:
+    """Damageable thing has a condition value, if the value is zero, it losts its functionality,
+       if the value is -max_value, it's no longer repairable
+    """
+
     name = 'unknown'
     owner = 'unknown'
 
@@ -70,6 +74,14 @@ class Damageable:
         self.cur_value += delta
         if self.cur_value > self.max_value:
             self.cur_value = self.max_value
+        if self.cur_value < -self.max_value:
+            self.cur_value = -self.max_value
+
+    def value(self):
+        return self.cur_value if self.cur_value > 0 else 0  # its value coming from it's functionable
+
+    def is_broken(self):
+        return self.cur_value <= -self.max_value  # cannot be repaired
 
     def take_turn(self):
         damages = []
