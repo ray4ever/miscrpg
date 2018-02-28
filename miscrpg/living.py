@@ -2,14 +2,16 @@ from muscular_system import MuscularCondition
 from immune_system import ImmuneCondition
 from sensory_system import SensoryCondition
 from cardio_system import CardioCondition
-from damageable import Damage, TurnBasedDamage, MixedDamage, SlashingDamage, BleedingDamage, CrushingDamage
+from damageable import Owner, Damage, TurnBasedDamage, MixedDamage, SlashingDamage, BleedingDamage, CrushingDamage
 from weapon import Limbs, Sword, NatureWeapon, Weapon, Club
 from armor import LeatherArmor, Skin, Armor
 from rpg_logs import battle_log
 from copy import deepcopy
 
-class Living:
-    name = 'unknown'
+class Living(Owner):
+    """any living thing can own damageable things
+    """
+
     CRIPPLED_THRESHOLD = 0.6
 
     def __init__(self, name='nameless', muscular=1, immune=1, sensory=1, cardio=1, weight=100, perks=[]):
@@ -22,13 +24,12 @@ class Living:
         self.perks = perks
         self.turn_based = [self.m, self.i, self.s, self.c]
         self.damageable = [self.m, self.i, self.s, self.c]
-        self.weapon = Limbs()
-        self.armor = Skin()
+        self.weapon = Limbs(self)
+        self.armor = Skin(self)
         for sub in self.turn_based:
             sub.owner = self.name  # no circular reference, just name
 
     def attack(self):
-        battle_log.add('%s attacking:' % self.name)
         adjusted = []
         if isinstance(self.weapon.damage, MixedDamage):
             damages = self.weapon.damage.lst
@@ -38,7 +39,10 @@ class Living:
             dmg = deepcopy(damage)
             #TODO: check weapon type when dealing damages, firearms are not based on muscle condition
             dmg_value = int(dmg.value * (self.m.value() / 100))
-            battle_log.add('%s weapon [%s] damage increased by muscle: %d -> %d' % (self.name, dmg.name, dmg.value, dmg_value))
+            battle_log.add(
+                '%s attacks with [%s] giving [%s] damage increased by muscle: %d -> %d' %
+                (self.name, self.weapon.name, dmg.name, dmg.value, dmg_value)
+            )
             dmg.value = dmg_value
             adjusted.append(dmg)
         if len(adjusted) > 1:
@@ -47,7 +51,6 @@ class Living:
             return adjusted[0]
 
     def defend(self, damage):
-        battle_log.add('%s defending:' % self.name)
         if self.armor is not None:
             damage = self.armor.resist(damage)
         self.take_damage(damage)
@@ -70,16 +73,13 @@ class Living:
         return some_sys_broken
 
     def is_disabled(self):
-        return self.m.value() == 0
+        return self.m.value() == 0 or self.c.value() == 0
 
     def is_crippled(self):
         return (self.m.value() / self.m.max_value) < Living.CRIPPLED_THRESHOLD
 
-    def is_paralyzed(self):
-        return self.s.value() == 0
-
     def is_unconscious(self):
-        return self.s.value() <= 0
+        return self.s.value() == 0
 
     def speed(self):
         return self.weight / self.m.value()
@@ -92,8 +92,6 @@ class Living:
             text += 'C'
         if self.is_disabled():
             text += 'D'
-        if self.is_paralyzed():
-            text += 'P'
         if self.is_unconscious():
             text += 'U'
         return text
@@ -127,10 +125,12 @@ class Intelligent(Living):
     def wield(self, weapon):
         assert isinstance(weapon, Weapon), '%s: must input instance of Weapon' % self.__class__.__name__
         self.weapon = weapon
+        weapon.set_owner(self)
 
     def wear(self, armor):
         assert isinstance(armor, Armor), '%s: must input instance of Armor' % self.__class__.__name__
         self.armor = armor
+        armor.owner = self
 
 
 if __name__ == "__main__":
@@ -151,6 +151,6 @@ if __name__ == "__main__":
         for being in [player, monster]:
             conds = [x.cur_value for x in being.damageable]
             being.take_turn()
-            print('%s %s (%s)' % (being.name, conds, being.status()))
+            print('%s misc condition %s status (%s)' % (being.name, conds, being.status()))
         if player.is_dead() or monster.is_dead():
             break

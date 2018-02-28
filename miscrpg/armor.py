@@ -12,8 +12,6 @@ damage_resistance_map = {
 
 
 class Armor(Damageable):
-    name = 'unknown'
-
     def __init__(self, condition, resistance):
         assert isinstance(resistance, Resistance) or isinstance(resistance, MixedResistance), 'must input instance of Resistance'
         super().__init__(condition)
@@ -35,10 +33,10 @@ class Armor(Damageable):
                         dmg_value = dmg.value - r.value
                         if dmg_value < 0:
                             dmg_value = 0
-                        battle_log.add('damage resisted by [%s]: %d -> %d' % (self.name, dmg.value, dmg_value))
+                        battle_log.add("%s's armor [%s] resisted damage by: %d -> %d" % (self.owner.name, self.name, dmg.value, dmg_value))
                         dmg.value = dmg_value
             self.cur_value -= 1  # armor will be damaged after each "resist"
-            battle_log.add('armor [%s] condition decreased to: %d' % (self.name, self.cur_value))
+            battle_log.add("%s's armor [%s] condition decreased to: %d" % (self.owner.name, self.name, self.cur_value))
         return damage
     
 
@@ -54,18 +52,21 @@ class LeatherArmor(Armor):
 
 
 class NatureArmor(Armor):
-    pass
-    #TODO: nature armor will restore its condition per turn
+    def __init__(self, owner, resistance):
+        super().__init__(0, resistance)
+        self.set_owner(owner)
 
 
 class Skin(NatureArmor):
-    def __init__(self, condition=0):
-        super().__init__(condition, Resistance(0))
+    name = 'skin'
+    def __init__(self, owner):
+        super().__init__(owner, Resistance(0))
 
 
 class Shell(NatureArmor):
-    def __init__(self, condition=30):
-        super().__init__(condition, MixedResistance([
+    name = 'shell'
+    def __init__(self, owner):
+        super().__init__(owner, MixedResistance([
             SlashResistance(10),
             PierceResistance(20),
         ]))

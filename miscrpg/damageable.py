@@ -44,18 +44,28 @@ class MixedDamage:
         self.lst.append(damage)
 
 
+class Owner:
+    """owner of damageable item, must have name
+    """
+    name = None
+
+
 class Damageable:
     """Damageable thing has a condition value, if the value is zero, it losts its functionality,
        if the value is -max_value, it's no longer repairable
     """
 
     name = 'unknown'
-    owner = 'unknown'
+    owner = Owner()
 
     def __init__(self, condition_value=1):
         self.cur_value = condition_value
         self.max_value = condition_value
         self.damages = []
+
+    def set_owner(self, owner):
+        assert isinstance(owner, Owner), 'only an Owner can own this'
+        self.owner = owner
 
     def take_damage(self, damage):
         if isinstance(damage, TurnBasedDamage):
@@ -88,6 +98,7 @@ class Damageable:
         for damage in self.damages:
             if damage.is_permanent:
                 self.change_max_value(-damage.turn_value)
+                battle_log.add('%s suffered permanent [%s] damage on [%s] -%d' % (self.owner, damage.name, self.name, damage.turn_value))
             else:
                 self.change_cur_value(-damage.turn_value)
                 battle_log.add('%s suffered [%s] damage on [%s] -%d' % (self.owner, damage.name, self.name, damage.turn_value))
