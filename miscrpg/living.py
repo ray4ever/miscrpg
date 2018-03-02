@@ -7,12 +7,11 @@ from weapon import Limbs, Sword, NatureWeapon, Weapon, Club
 from armor import LeatherArmor, Skin, Armor
 from rpg_logs import battle_log
 from copy import deepcopy
+from itertools import permutations
 
 class Living(Owner):
     """any living thing can own damageable things
     """
-
-    CRIPPLED_THRESHOLD = 0.6
 
     def __init__(self, name='nameless', muscular=1, immune=1, sensory=1, cardio=1, weight=100, perks=[]):
         self.name = name
@@ -26,10 +25,12 @@ class Living(Owner):
         self.damageable = [self.m, self.i, self.s, self.c]
         self.weapon = Limbs(self)
         self.armor = Skin(self)
+        self.actionable = 0  # 1 is actionable, accumulated every turn based on speed()
         for sub in self.turn_based:
             sub.owner = self.name  # no circular reference, just name
 
     def attack(self):
+        self.actionable -= 1  # spend the action point on attack
         adjusted = []
         if isinstance(self.weapon.damage, MixedDamage):
             damages = self.weapon.damage.lst
@@ -51,7 +52,7 @@ class Living(Owner):
             return adjusted[0]
 
     def defend(self, damage):
-        if self.armor is not None:
+        if self.armor is not None and (not self.is_unconscious()) and (not self.is_disabled()):
             damage = self.armor.resist(damage)
         self.take_damage(damage)
 
@@ -65,38 +66,38 @@ class Living(Owner):
         return self.c.value() // 70  # fail to regenrate if cardio condition lower than 70%
 
     def is_dead(self):
-        some_sys_broken = False
+        sub_sys_broken = False
         for sys in self.damageable:
-            some_sys_broken = some_sys_broken or sys.is_broken()
-            if some_sys_broken:
+            sub_sys_broken = sub_sys_broken or sys.is_broken()
+            if sub_sys_broken:
                 break
-        return some_sys_broken
+        return sub_sys_broken
 
     def is_disabled(self):
         return self.m.value() == 0 or self.c.value() == 0
-
-    def is_crippled(self):
-        return (self.m.value() / self.m.max_value) < Living.CRIPPLED_THRESHOLD
 
     def is_unconscious(self):
         return self.s.value() == 0
 
     def speed(self):
-        return self.weight / self.m.value()
+        return self.m.value() / self.weight
 
     def status(self):
         text = ''
         if self.is_dead():
             return 'DEAD'
-        if self.is_crippled():
-            text += 'C'
         if self.is_disabled():
-            text += 'D'
+            text += 'D'  # may still use mind power ??
         if self.is_unconscious():
             text += 'U'
         return text
 
+    def is_actionable(self):
+        return self.actionable >= 1
+    
     def take_turn(self):
+        self.actionable += self.speed()
+        battle_log.add('%s recovers action point to %f' % (self.name, self.actionable))
         for x in self.turn_based:
             x.take_turn()  # sub system may have turn-based effects, such as bleeding
             if x.value() < x.max_value:
@@ -130,7 +131,7 @@ class Intelligent(Living):
     def wear(self, armor):
         assert isinstance(armor, Armor), '%s: must input instance of Armor' % self.__class__.__name__
         self.armor = armor
-        armor.owner = self
+        armor.set_owner(self)
 
 
 if __name__ == "__main__":
@@ -139,18 +140,24 @@ if __name__ == "__main__":
     player.wear(LeatherArmor())
     monster = Intelligent('Ogre', 300, 100, 150, 100, weight=500)  # stronger muscle and sensory system, but weight slows it down
     monster.wield(Club())
+    def display_condition(being):
+        conds = [x.cur_value for x in being.damageable]
+        print('%s MISC condition %s status (%s)' % (being.name, conds, being.status()))
     turn = 0
     while True:
         turn += 1
         print('Turn %d' % turn)
-        if not player.is_unconscious():
-            monster.defend(player.attack())
-        if not monster.is_unconscious():
-            player.defend(monster.attack())
-        battle_log.flush()
-        for being in [player, monster]:
-            conds = [x.cur_value for x in being.damageable]
-            being.take_turn()
-            print('%s misc condition %s status (%s)' % (being.name, conds, being.status()))
+        for (attacker, defender) in permutations([player, monster]):
+            # display attacker action
+            attacker.take_turn()
+            battle_log.flush()
+            display_condition(attacker)
+            if attacker.is_actionable() and (not attacker.is_unconscious()):
+                defender.defend(attacker.attack())
+            else:
+                print('%s is not actionable and skips this turn' % attacker.name)
+            battle_log.flush()
+            # display defender status
+            display_condition(defender)
         if player.is_dead() or monster.is_dead():
             break
