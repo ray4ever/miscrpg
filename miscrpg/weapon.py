@@ -10,6 +10,7 @@ class Weapon(Damageable):
 
 class Sword(Weapon):
     name = 'sword'
+    weight = 5
     def __init__(self):
         super().__init__(MixedDamage([
             SlashingDamage(30),
@@ -19,6 +20,7 @@ class Sword(Weapon):
 
 class Club(Weapon):
     name = 'club'
+    weight = 10
     def __init__(self):
         super().__init__(MixedDamage([
             CrushingDamage(15)
@@ -26,6 +28,7 @@ class Club(Weapon):
 
 
 class NatureWeapon(Weapon):
+    weight = 0
     def __init__(self, damage, owner):
         assert isinstance(damage, Damage) or isinstance(damage, MixedDamage), 'must input instance of Damage'
         super().__init__(damage, 0)  # natural weapon does not have own condition, it purely relies on owner muscle

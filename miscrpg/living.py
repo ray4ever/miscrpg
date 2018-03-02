@@ -126,11 +126,13 @@ class Intelligent(Living):
     def wield(self, weapon):
         assert isinstance(weapon, Weapon), '%s: must input instance of Weapon' % self.__class__.__name__
         self.weapon = weapon
+        self.weight += weapon.weight
         weapon.set_owner(self)
 
     def wear(self, armor):
         assert isinstance(armor, Armor), '%s: must input instance of Armor' % self.__class__.__name__
         self.armor = armor
+        self.weight += armor.weight
         armor.set_owner(self)
 
 
@@ -154,9 +156,9 @@ if __name__ == "__main__":
             display_condition(attacker)
             if attacker.is_actionable() and (not attacker.is_unconscious()):
                 defender.defend(attacker.attack())
+                battle_log.flush()
             else:
                 print('%s is not actionable and skips this turn' % attacker.name)
-            battle_log.flush()
             # display defender status
             display_condition(defender)
         if player.is_dead() or monster.is_dead():

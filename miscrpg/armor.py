@@ -42,6 +42,7 @@ class Armor(Damageable):
 
 class LeatherArmor(Armor):
     name = 'leather'
+    weight = 5
 
     def __init__(self, condition=50):
         super().__init__(condition, MixedResistance([
@@ -52,6 +53,7 @@ class LeatherArmor(Armor):
 
 
 class NatureArmor(Armor):
+    weight = 0
     def __init__(self, owner, resistance):
         super().__init__(0, resistance)
         self.set_owner(owner)

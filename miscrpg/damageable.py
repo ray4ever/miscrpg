@@ -57,6 +57,7 @@ class Damageable:
 
     name = 'unknown'
     owner = Owner()
+    weight = 1
 
     def __init__(self, condition_value=1):
         self.cur_value = condition_value
