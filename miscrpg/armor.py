@@ -1,5 +1,5 @@
 from resistance import Resistance, SlashResistance, CrushResistance, PierceResistance, MixedResistance
-from damageable import Damageable, Damage, MixedDamage, SlashingDamage, CrushingDamage, PiercingDamage
+from damageable import Damageable, Damage, SeqDamage, SlashingDamage, CrushingDamage, PiercingDamage
 from rpg_logs import battle_log
 
 
@@ -22,7 +22,7 @@ class Armor(Damageable):
 
     def resist(self, damage):
         if self.cur_value > 0:  # armor condition > 0 to resist
-            if isinstance(damage, MixedDamage):
+            if isinstance(damage, SeqDamage):
                 damages = damage.lst
             else:
                 damages = [damage]
@@ -33,12 +33,13 @@ class Armor(Damageable):
                         dmg_value = dmg.value - r.value
                         if dmg_value < 0:
                             dmg_value = 0
-                        battle_log.add("%s's armor [%s] resisted damage by: %d -> %d" % (self.owner.name, self.name, dmg.value, dmg_value))
+                        battle_log.add("%s's armor [%s] resisted %s damage: %d -> %d" % (self.owner.name, self.name, dmg.name, dmg.value, dmg_value))
                         dmg.value = dmg_value
-            self.cur_value -= 1  # armor will be damaged after each "resist"
+        if not isinstance(self, NatureArmor):
+            self.cur_value -= 1  # armor will be damaged after each "resist", unless it's natural armor
             battle_log.add("%s's armor [%s] condition decreased to: %d" % (self.owner.name, self.name, self.cur_value))
         return damage
-    
+
 
 class LeatherArmor(Armor):
     name = 'leather'
@@ -47,7 +48,19 @@ class LeatherArmor(Armor):
     def __init__(self, condition=50):
         super().__init__(condition, MixedResistance([
             SlashResistance(5),
-            CrushResistance(5),
+            CrushResistance(10),
+            PierceResistance(5),
+        ]))
+
+
+class ChainArmor(Armor):
+    name = 'chain'
+    weight = 10
+
+    def __init__(self, condition=50):
+        super().__init__(condition, MixedResistance([
+            SlashResistance(30),
+            CrushResistance(10),
             PierceResistance(5),
         ]))
 
@@ -55,14 +68,14 @@ class LeatherArmor(Armor):
 class NatureArmor(Armor):
     weight = 0
     def __init__(self, owner, resistance):
-        super().__init__(0, resistance)
+        super().__init__(1, resistance)  # natural armor condition is 1, always 1
         self.set_owner(owner)
 
 
 class Skin(NatureArmor):
     name = 'skin'
     def __init__(self, owner):
-        super().__init__(owner, Resistance(0))
+        super().__init__(owner, CrushResistance(5))
 
 
 class Shell(NatureArmor):

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from rpg_logs import battle_log
+from rpg_logs import battle_log, general_log
 
 class Damage:
     name = 'unknown'
@@ -29,11 +29,14 @@ class CrushingDamage(Damage):
 
 class BleedingDamage(TurnBasedDamage):
     name = 'bleeding'
-    def __init__(self, turn_value=0, turns=0, permanent=False):
-        super().__init__(0, turn_value, turns, permanent)
+    def __init__(self, turn_dmg=0, turns=0, permanent=False):
+        super().__init__(0, turn_dmg, turns, permanent)
 
 
-class MixedDamage:
+class SeqDamage:
+    """sequential damages apply in sequence, if last damage is zero (not damaged), current damage wont apply
+    """
+
     lst = []  # list of all damages
     def __init__(self, lst):
         assert all(isinstance(x, Damage) for x in lst), 'can only include a "damage"' 
@@ -54,9 +57,9 @@ class Damageable:
     """Damageable thing has a condition value, if the value is zero, it losts its functionality,
        if the value is -max_value, it's no longer repairable
     """
-
+    OWNERLESS = Owner()
     name = 'unknown'
-    owner = Owner()
+    owner = OWNERLESS
     weight = 1
 
     def __init__(self, condition_value=1):
@@ -65,6 +68,8 @@ class Damageable:
         self.damages = []
 
     def set_owner(self, owner):
+        if owner is None:
+            owner = Damageable.OWNERLESS
         assert isinstance(owner, Owner), 'only an Owner can own this'
         self.owner = owner
 
@@ -107,3 +112,14 @@ class Damageable:
             if damage.turns > 0:
                 damages.append(damage)
         self.damages = damages
+
+    def repair(self):
+        if self.is_broken():
+            general_log.add("%s's %s is broken and cannot be repaired" % (self.owner.name, self.name))
+        else:
+            self.cur_value = self.max_value
+            general_log.add("%s's %s repaired to full condition: %d" % (self.owner.name, self.name, self.cur_value))
+
+    def magically_restore(self):
+        self.cur_value = self.max_value
+        self.damages = []

@@ -1,6 +1,9 @@
 class Log:
     lines = []
     
+    def __init__(self):
+        self.lines = []
+
     def add(self, line):
         self.lines.append(line)
     
@@ -11,3 +14,4 @@ class Log:
 
 
 battle_log = Log()
+general_log = Log()
